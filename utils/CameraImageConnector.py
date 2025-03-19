@@ -9,11 +9,13 @@ class ImageConnector:
         self.lastFrame = None
 
     def setImages(self,images:list):
+        '''Pass the list of frames to connect it might be as many as you want'''
         self.images.clear()
         for i in images:
             self.images.append(i)
 
     def connectImages(self) -> bool:
+        '''Connect passed images into one wide image. It might return false if no image were passed in setImage before'''
         if not self.images:
             return False
         tempNewImageConnected = numpy.zeros((self.singleImageHeight,self.singleImageWidth*len(self.images),3))
@@ -24,4 +26,5 @@ class ImageConnector:
         return True
 
     def getConnectedImage(self) -> Optional[numpy.ndarray]:
+        '''returns last connected image or none if there was none prevoisly'''
         return self.lastFrame
