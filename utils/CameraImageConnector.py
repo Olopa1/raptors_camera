@@ -18,7 +18,7 @@ class ImageConnector:
         '''Connect passed images into one wide image. It might return false if no image were passed in setImage before'''
         if not self.images:
             return False
-        tempNewImageConnected = numpy.zeros((self.singleImageHeight,self.singleImageWidth*len(self.images),3))
+        tempNewImageConnected = numpy.zeros((self.singleImageHeight,self.singleImageWidth*len(self.images),3), dtype=numpy.uint8)
         for i in range(len(self.images)):
             widthOffset = self.singleImageWidth * i
             tempNewImageConnected[:,widthOffset:self.singleImageWidth + widthOffset,:] = self.images[i]
@@ -28,7 +28,7 @@ class ImageConnector:
     def connectImagesSquare(self,framesInOneRow:int) -> bool:
         if not self.images:
             return False
-        tempNewImageConnected = numpy.zeros((self.singleImageHeight*len(self.images)//2,self.singleImageWidth*len(self.images)//framesInOneRow,3))
+        tempNewImageConnected = numpy.zeros((self.singleImageHeight*len(self.images)//2,self.singleImageWidth*len(self.images)//framesInOneRow,3), dtype=numpy.uint8)
         heightOffset = -self.singleImageHeight
         for i in range(len(self.images)):
             widthOffset = self.singleImageWidth * (i%framesInOneRow)

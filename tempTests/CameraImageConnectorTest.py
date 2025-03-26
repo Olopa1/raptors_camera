@@ -1,11 +1,14 @@
-from utils.CameraImageConnector import ImageConnector
 import numpy
 import cv2
+import sys
+import os
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+from utils.CameraImageConnector import ImageConnector
 
-image1 = cv2.imread("../images/calibration/USB1_0.png")
-image2 = cv2.imread("../images/calibration/USB1_1.png")
-image3 = cv2.imread("../images/calibration/USB1_2.png")
-image4 = cv2.imread("../images/calibration/USB1_3.png")
+image1 = cv2.imread("../images/Calibration/USB1_0.png")
+image2 = cv2.imread("../images/Calibration/USB1_1.png")
+image3 = cv2.imread("../images/Calibration/USB1_2.png")
+image4 = cv2.imread("../images/Calibration/USB1_3.png")
 
 width = image1.shape[1]
 height = image1.shape[0]
