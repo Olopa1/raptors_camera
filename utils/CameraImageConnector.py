@@ -8,11 +8,14 @@ class ImageConnector:
         self.images = []
         self.lastFrame = None
 
-    def setImages(self,images:list):
+    def setImages(self,images:list)->bool:
         '''Pass the list of frames to connect it might be as many as you want'''
         self.images.clear()
         for i in images:
+            if i is None:
+                return False
             self.images.append(i)
+        return True
 
     def connectImagesWide(self) -> bool:
         '''Connect passed images into one wide image. It might return false if no image were passed in setImage before'''

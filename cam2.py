@@ -1,8 +1,19 @@
 import cv2
 
 # Create a VideoCapture object and open the camera (try index 0 if 4 doesn't work)
-cap = cv2.VideoCapture(0)  # Index 0 for default camera
-print('is working')
+
+i = -1
+#i=40
+while i < 39:
+    i+=1
+    cap = cv2.VideoCapture(i)  # Index 0 for default camera
+    if not cap.isOpened():
+        continue
+    ret, frame = cap.read()
+    if ret:
+        print(f'#### video port {i} is working #####')
+        cap.release()
+cap = cv2.VideoCapture(8)
 cap.set(cv2.CAP_PROP_FRAME_WIDTH, 640)
 cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 480)
 # Check if the camera opened successfully

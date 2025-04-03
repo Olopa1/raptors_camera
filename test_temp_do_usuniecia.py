@@ -3,7 +3,7 @@ import numpy as np
 from picamera2 import Picamera2
 
 # Inicjalizacja Picamera2
-camera_index = 1
+camera_index = 2
 
 picam2 = Picamera2(camera_index)
 picam2.configure(picam2.create_still_configuration())
