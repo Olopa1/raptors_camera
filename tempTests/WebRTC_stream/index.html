@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>WebRTC Camera Stream</title>
+</head>
+<body>
+  <h1>Camera Stream</h1>
+  <video id="video" autoplay playsinline controls muted></video>
+
+  <script>
+    const pc = new RTCPeerConnection();
+    const video = document.getElementById('video');
+
+    // Tell the server we want to receive video
+    pc.addTransceiver('video', { direction: 'recvonly' });
+
+    pc.ontrack = (event) => {
+      console.log("📹 Got track:", event.track.kind);
+      if (event.track.kind === 'video') {
+        video.srcObject = event.streams[0];
+      }
+    };
+
+    async function negotiate() {
+      const offer = await pc.createOffer();
+      await pc.setLocalDescription(offer);
+
+      const response = await fetch('/offer', {
+        method: 'POST',
+        body: JSON.stringify({
+          sdp: pc.localDescription.sdp,
+          type: pc.localDescription.type
+        }),
+        headers: { 'Content-Type': 'application/json' }
+      });
+
+      const answer = await response.json();
+      await pc.setRemoteDescription(answer);
+    }
+
+    negotiate();
+  </script>
+</body>
+</html>
