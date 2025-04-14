@@ -24,7 +24,7 @@ out = cv2.VideoWriter('appsrc ! videoconvert' + \
     ' ! x264enc speed-preset=ultrafast bitrate=600 key-int-max=' + str(fps * 2) + \
     ' ! video/x-h264,profile=baseline' + \
     ' ! rtspclientsink location=rtsp://192.168.2.110:8554/mystream',
-  #  ' ! webrtcclientsink location=ws://192.168.1.134:8000/mystream',
+    #' ! webrtcclientsink location=ws://192.168.2.134:8000/mystream',
     cv2.CAP_GSTREAMER, 0, fps, (width*2, height*2), True)
 if not out.isOpened():
     raise Exception("can't open video writer")
