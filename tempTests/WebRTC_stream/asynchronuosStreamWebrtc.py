@@ -20,11 +20,6 @@ from utils.ThreadingCamera import loadCameras
 fps = 15
 width = 1280
 height = 720
-colors = [
-    (0, 0, 255),
-    (255, 0, 0),
-    (0, 255, 0),
-]
 
 pcs = set()
 ROOT = pathlib.Path(__file__).parent  # <-- Path to find index.html
@@ -38,54 +33,50 @@ class CameraStreamTrack(VideoStreamTrack):
 
     def __init__(self):
         super().__init__()
-        curcolor = 0
-        start = time()
-        self.imageConnector = None
-        self.frames = []
-        self.camerasLoaded = None
 
         if CameraStreamTrack.isInitialized is False:
+            self.imageConnector = None
+            self.frames = []
+            self.camerasLoaded = None
+            self.cameras = None
             self.setup()
             CameraStreamTrack.isInitialized = True
 
     async def recv(self):
+        await asyncio.sleep(1 / 15) # 15 fps
         #print("recv() called")
         pts, time_base = await self.next_timestamp()
 
-        ret, frame = self.cap.read()
-        if not ret:
-            raise Exception("Could not read frame from camera")
-
-        # Convert frame to RGB
-        frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+        # Get frames from async threads and connect them
         frames = [frame.getFrame() for frame in self.camerasLoaded]
-        #print(camerasLoaded[0].getFrame())
         self.imageConnector.setImages(frames)
         if self.imageConnector.connectImagesSquare(2):
             image = self.imageConnector.getConnectedImage()
             if image is None:
                 print("Error getting connected image")
-                return
-                pass
+                image = np.zeros((height, width, 3), dtype=np.uint8)  # black frame
 
         else:
             print("Error connecting frames")
             print("Frame skipped")
-            return
+            image = np.zeros((height, width, 3), dtype=np.uint8)  # black frame
 
         # Create VideoFrame
-        video_frame = VideoFrame.from_ndarray(frame, format="rgb24")
+        video_frame = VideoFrame.from_ndarray(image, format="rgb24")
         video_frame.pts = pts
         video_frame.time_base = time_base
         return video_frame
 
-    def setup(self):
-
-        cameras = {"Camera1": (0, (height,width)), "Camera2": (1,(height,width)), "Camera3": (2,(height,width)), "Camera4": (3,(height,width))}
+    def setup(self) -> None:
+        """
+        Initializes cameras.
+        :return:
+        """
+        self.cameras = {"Camera1": (0, (height,width)), "Camera2": (1,(height,width)), "Camera3": (2,(height,width)), "Camera4": (3,(height,width))}
         print("init")
-        print(cameras.values())
+        print(self.cameras.values())
 
-        self.camerasLoaded = loadCameras(cameras.values())
+        self.camerasLoaded = loadCameras(self.cameras.values())
         self.frames = []
         self.imageConnector = ImageConnector(width,height)
         print(self.camerasLoaded)
@@ -94,7 +85,8 @@ class CameraStreamTrack(VideoStreamTrack):
             print("Error loading cameras")
             exit()
 
-        print('setup gotowy')
+        print('setup ready')
+
 
 async def offer(request):
     params = await request.json()
