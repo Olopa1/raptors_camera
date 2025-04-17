@@ -30,35 +30,43 @@ class CameraStreamTrack(VideoStreamTrack):
     """
 
     isInitialized = False
+    camerasLoaded = None
+    cameras = None
 
     def __init__(self):
         super().__init__()
 
+        self.imageConnector = ImageConnector(width, height)
+        self.frames = []
+
         if CameraStreamTrack.isInitialized is False:
-            self.imageConnector = None
-            self.frames = []
-            self.camerasLoaded = None
-            self.cameras = None
             self.setup()
             CameraStreamTrack.isInitialized = True
 
     async def recv(self):
-        await asyncio.sleep(1 / 15) # 15 fps
-        #print("recv() called")
-        pts, time_base = await self.next_timestamp()
+        try:
+            # sleep to simulate fps
+            await asyncio.sleep(1 / fps)
 
-        # Get frames from async threads and connect them
-        frames = [frame.getFrame() for frame in self.camerasLoaded]
-        self.imageConnector.setImages(frames)
-        if self.imageConnector.connectImagesSquare(2):
-            image = self.imageConnector.getConnectedImage()
-            if image is None:
-                print("Error getting connected image")
-                image = np.zeros((height, width, 3), dtype=np.uint8)  # black frame
+            # print("recv() called")
+            pts, time_base = await self.next_timestamp()
 
-        else:
-            print("Error connecting frames")
-            print("Frame skipped")
+            if CameraStreamTrack.camerasLoaded is None:
+                raise Exception("Cameras not yet loaded")
+
+            # Get frames from async threads and connect them
+            frames = [frame.getFrame() for frame in CameraStreamTrack.camerasLoaded]
+            self.imageConnector.setImages(frames)
+            if self.imageConnector.connectImagesSquare(2):
+                image = self.imageConnector.getConnectedImage()
+                if image is None:
+                    raise Exception("Error getting connected image")
+
+            else:
+                raise Exception("Error connecting frames")
+
+        except Exception as e:
+            print("Exception in recv():", e)
             image = np.zeros((height, width, 3), dtype=np.uint8)  # black frame
 
         # Create VideoFrame
@@ -70,18 +78,16 @@ class CameraStreamTrack(VideoStreamTrack):
     def setup(self) -> None:
         """
         Initializes cameras.
-        :return:
         """
-        self.cameras = {"Camera1": (0, (height,width)), "Camera2": (1,(height,width)), "Camera3": (2,(height,width)), "Camera4": (3,(height,width))}
-        print("init")
-        print(self.cameras.values())
 
-        self.camerasLoaded = loadCameras(self.cameras.values())
-        self.frames = []
-        self.imageConnector = ImageConnector(width,height)
-        print(self.camerasLoaded)
-        if not self.camerasLoaded:
-            print(self.camerasLoaded)
+        CameraStreamTrack.cameras = {"Camera1": (0, (height,width)), "Camera2": (1,(height,width)), "Camera3": (2,(height,width)), "Camera4": (3,(height,width))}
+        # print("init")
+        print(CameraStreamTrack.cameras.values())
+
+        CameraStreamTrack.camerasLoaded = loadCameras(self.cameras.values())
+        print(CameraStreamTrack.camerasLoaded)
+        if not CameraStreamTrack.camerasLoaded:
+            print(CameraStreamTrack.camerasLoaded)
             print("Error loading cameras")
             exit()
 
