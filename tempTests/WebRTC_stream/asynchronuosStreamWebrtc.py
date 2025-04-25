@@ -1,27 +1,31 @@
 #ten kod wysyla stream do wifi po webrtc!!!
 import asyncio
-import cv2
+import ssl
+import uuid
+import logging
+import argparse
+import json
 import pathlib
 from aiohttp import web
 from aiortc import RTCPeerConnection, RTCSessionDescription, VideoStreamTrack
-from aiortc.contrib.media import MediaBlackhole, MediaPlayer
+from aiortc.contrib.media import MediaBlackhole, MediaPlayer, MediaRelay, MediaRecorder
 from av import VideoFrame
-from datetime import datetime
-from time import sleep, time
+from time import time_ns
 import sys
 import os
-import cv2
 import numpy as np
-from picamera2 import Picamera2
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../..')))
 from utils.CameraImageConnector import ImageConnector
-from utils.ThreadingCamera import loadCameras
+from utils.ThreadingCamera import loadCameras,textWithBorder
 
-fps = 15
+fps = 120
 width = 1280
 height = 720
 
+logger = logging.getLogger("pc")
 pcs = set()
+relay = MediaRelay()
+
 ROOT = pathlib.Path(__file__).parent  # <-- Path to find index.html
 
 class CameraStreamTrack(VideoStreamTrack):
@@ -39,15 +43,24 @@ class CameraStreamTrack(VideoStreamTrack):
         self.imageConnector = ImageConnector(width, height)
         self.frames = []
 
+        self._fps = 0
+        
+        self._prevFrameTimeStamp = time_ns()
+        self._secondTimer = 0
+        self._framesCount = 0
+
+
+
         if CameraStreamTrack.isInitialized is False:
             self.setup()
             CameraStreamTrack.isInitialized = True
 
     async def recv(self):
         try:
+            
+            tempFrameStart = time_ns()
             # sleep to simulate fps
-            await asyncio.sleep(1 / fps)
-
+            self._countFrames()
             # print("recv() called")
             pts, time_base = await self.next_timestamp()
 
@@ -61,10 +74,11 @@ class CameraStreamTrack(VideoStreamTrack):
                 image = self.imageConnector.getConnectedImage()
                 if image is None:
                     raise Exception("Error getting connected image")
-
+            
             else:
                 raise Exception("Error connecting frames")
-
+            #myText = f"Nanos of fram connecting: {(tempFrameStop - tempFrameStart)/10**9}"
+            textWithBorder(frame=image,text=f"FPS after stream: {self._fps}", pos=(0,200))
         except Exception as e:
             print("Exception in recv():", e)
             image = np.zeros((height, width, 3), dtype=np.uint8)  # black frame
@@ -73,6 +87,8 @@ class CameraStreamTrack(VideoStreamTrack):
         video_frame = VideoFrame.from_ndarray(image, format="rgb24")
         video_frame.pts = pts
         video_frame.time_base = time_base
+        tempFrameStop = time_ns()
+        print(f"Time for method to run: {(tempFrameStop - tempFrameStart)/10**9}")
         return video_frame
 
     def setup(self) -> None:
@@ -93,6 +109,15 @@ class CameraStreamTrack(VideoStreamTrack):
 
         print('setup ready')
 
+    def _countFrames(self):
+        frameStart = time_ns()
+        self._secondTimer += frameStart - self._prevFrameTimeStamp
+        self._prevFrameTimeStamp = frameStart
+        self._framesCount += 1
+        if self._secondTimer >= 10**9:
+            self._fps = self._framesCount
+            self._framesCount = self._secondTimer = 0
+
 
 async def offer(request):
     params = await request.json()
@@ -103,15 +128,30 @@ async def offer(request):
 
     pcs.add(pc)
     ### 
-    params = await request.json()
-    offer = RTCSessionDescription(sdp=params["sdp"], type=params["type"])
+    #params = await request.json()
+    #offer = RTCSessionDescription(sdp=params["sdp"], type=params["type"])
 
     pc = RTCPeerConnection()
     pcs.add(pc)
 
     # Add our camera stream
     camera = CameraStreamTrack()
-    pc.addTrack(camera)
+    sender = pc.addTrack(camera)
+
+    try:
+        params = sender.getParameters()
+    
+        if not params.encodings:
+        # jeśli brak encodings, trzeba dodać domyślny encoding
+            params.encodings = [{}]
+
+    # Teraz możesz ustawić bitrate
+        params.encodings[0]["maxBitrate"] = 1_000  # np. 2 Mbps
+
+        await sender.setParameters(params)
+
+    except Exception as e:
+        print("Błąd podczas ustawiania maxBitrate:", e)
 
     await pc.setRemoteDescription(offer)
     answer = await pc.createAnswer()
@@ -128,6 +168,11 @@ async def index(request):
     content = (ROOT / "index.html").read_text()
     return web.Response(content_type="text/html", text=content)
 
+async def javascript(request):
+    content = open(os.path.join(ROOT, "client.js"), "r").read()
+    return web.Response(content_type="application/javascript", text=content)
+
+
 async def on_shutdown(app):
     # Cleanup
     coros = [pc.close() for pc in pcs]
@@ -137,6 +182,7 @@ async def on_shutdown(app):
 
 app = web.Application()
 app.router.add_get("/", index)        # <-- serve index.html at /
+app.router.add_get("/client.js", javascript)
 app.router.add_post("/offer", offer)
 app.on_shutdown.append(on_shutdown)
 
