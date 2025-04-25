@@ -19,8 +19,8 @@ from utils.CameraImageConnector import ImageConnector
 from utils.ThreadingCamera import loadCameras,textWithBorder
 
 fps = 120
-width = 1280
-height = 720
+width = 640
+height = 480
 
 logger = logging.getLogger("pc")
 pcs = set()
