@@ -39,7 +39,7 @@ while(cap.isOpened()):
         # Press 'm' to capture and save the current frame
         if cv2.waitKey(25) & 0xFF == ord('m'):
             # Save the captured frame as an image
-            filename = f'/home/raptors/Desktop/wojtek/Data_img/test_{i}.png'
+            filename = f'./Data_img/test_{i}.png'
             cv2.imwrite(filename, frame)
             print(f"Photo taken and saved: {filename}")
             i += 1

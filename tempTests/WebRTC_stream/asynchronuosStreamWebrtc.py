@@ -60,6 +60,7 @@ class CameraStreamTrack(VideoStreamTrack):
             
             tempFrameStart = time_ns()
             # sleep to simulate fps
+            await asyncio.sleep(1/fps)
             self._countFrames()
             # print("recv() called")
             pts, time_base = await self.next_timestamp()

@@ -7,7 +7,7 @@ from aiortc import RTCPeerConnection, RTCSessionDescription, VideoStreamTrack
 from aiortc.contrib.media import MediaBlackhole, MediaPlayer
 from av import VideoFrame
 from datetime import datetime
-from time import sleep, time
+from time import sleep, time, time_ns
 import sys
 import os
 import cv2
@@ -15,6 +15,7 @@ import numpy as np
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../..')))
 from utils.CameraImageConnector import ImageConnector
 from utils.ThreadingCameraWithoutPicam import loadCameras
+from utils.ThreadingCamera import textWithBorder
 
 fps = 15
 width = 1280
@@ -42,11 +43,18 @@ class CameraStreamTrack(VideoStreamTrack):
             self.setup()
             CameraStreamTrack.isInitialized = True
 
+        self._fps = 0
+        
+        self._prevFrameTimeStamp = time_ns()
+        self._secondTimer = 0
+        self._framesCount = 0
+
+
     async def recv(self):
         try:
             # sleep to simulate fps
             await asyncio.sleep(1 / fps)
-
+            self._countFrames()
             # print("recv() called")
             pts, time_base = await self.next_timestamp()
 
@@ -55,15 +63,16 @@ class CameraStreamTrack(VideoStreamTrack):
 
             # Get frames from async threads and connect them
             frames = [frame.getFrame() for frame in CameraStreamTrack.camerasLoaded]
-            self.imageConnector.setImages(frames)
-            if self.imageConnector.connectImagesSquare(1):
-                image = self.imageConnector.getConnectedImage()
-                if image is None:
-                    raise Exception("Error getting connected image")
+            #self.imageConnector.setImages(frames)
+            #if self.imageConnector.connectImagesSquare(1):
+            #    image = self.imageConnector.getConnectedImage()
+            #    if image is None:
+            #        raise Exception("Error getting connected image")
 
-            else:
-                raise Exception("Error connecting frames")
-
+            #else:
+            #    raise Exception("Error connecting frames")
+            image = frames[0]
+            textWithBorder(frame=image,text=f"FPS: {self._fps}", pos=(0,200))
         except Exception as e:
             print("Exception in recv():", e)
             image = np.zeros((height, width, 3), dtype=np.uint8)  # black frame
@@ -92,6 +101,14 @@ class CameraStreamTrack(VideoStreamTrack):
 
         print('setup ready')
 
+    def _countFrames(self):
+        frameStart = time_ns()
+        self._secondTimer += frameStart - self._prevFrameTimeStamp
+        self._prevFrameTimeStamp = frameStart
+        self._framesCount += 1
+        if self._secondTimer >= 10**9:
+            self._fps = self._framesCount
+            self._framesCount = self._secondTimer = 0
 
 async def offer(request):
     params = await request.json()

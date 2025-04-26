@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>WebRTC Camera Stream</title>
+  <title>WebRTC Camera Stream (H.264)</title>
 </head>
 <body>
   <h1>Camera Stream</h1>
@@ -11,19 +11,37 @@
     const pc = new RTCPeerConnection();
     const video = document.getElementById('video');
 
-    // Tell the server we want to receive video
     pc.addTransceiver('video', { direction: 'recvonly' });
 
     pc.ontrack = (event) => {
-      console.log("📹 Got track:", event.track.kind);
       if (event.track.kind === 'video') {
         video.srcObject = event.streams[0];
       }
     };
 
+    function preferH264(sdp) {
+      const sdpLines = sdp.split('\r\n');
+      const mLineIndex = sdpLines.findIndex(line => line.startsWith('m=video'));
+
+      // Znajdź payloady dla H.264
+      const h264Payloads = sdpLines
+        .filter(line => line.startsWith('a=rtpmap') && line.includes('H264'))
+        .map(line => line.match(/:(\d+) H264/)[1]);
+
+      if (mLineIndex !== -1 && h264Payloads.length) {
+        const mLine = sdpLines[mLineIndex].split(' ');
+        const filtered = mLine.filter(p => h264Payloads.includes(p));
+        sdpLines[mLineIndex] = [...mLine.slice(0, 3), ...filtered].join(' ');
+      }
+
+      return sdpLines.join('\r\n');
+    }
+
     async function negotiate() {
       const offer = await pc.createOffer();
-      await pc.setLocalDescription(offer);
+      const modifiedSDP = preferH264(offer.sdp);
+
+      await pc.setLocalDescription({ type: offer.type, sdp: modifiedSDP });
 
       const response = await fetch('/offer', {
         method: 'POST',
