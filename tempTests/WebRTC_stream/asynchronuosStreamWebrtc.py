@@ -14,9 +14,10 @@ from time import time_ns
 import sys
 import os
 import numpy as np
+import traceback
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../..')))
-from utils.CameraImageConnector import ImageConnector
 from utils.ThreadingCamera import loadCameras,textWithBorder
+from utils.cameraImageConnector.ImageConnectorsCollection import ImageConnectorPanoramic, ImageConnectorSquare
 
 fps = 120
 width = 640
@@ -40,7 +41,7 @@ class CameraStreamTrack(VideoStreamTrack):
     def __init__(self):
         super().__init__()
 
-        self.imageConnector = ImageConnector(width, height)
+        self.imageConnector = ImageConnectorSquare(width, height)
         self.frames = []
 
         self._fps = 0
@@ -69,9 +70,16 @@ class CameraStreamTrack(VideoStreamTrack):
                 raise Exception("Cameras not yet loaded")
 
             # Get frames from async threads and connect them
-            frames = [frame.getFrame() for frame in CameraStreamTrack.camerasLoaded]
+            frames = dict()
+            for camera in CameraStreamTrack.camerasLoaded:
+                data = camera.getFrame()
+                frames[data[0]] = data[1]
+
+            # frames = [frame.getFrame() for frame in CameraStreamTrack.camerasLoaded]
+
+
             self.imageConnector.setImages(frames)
-            if self.imageConnector.connectImagesSquare(2):
+            if self.imageConnector.connectImages():
                 image = self.imageConnector.getConnectedImage()
                 if image is None:
                     raise Exception("Error getting connected image")
@@ -82,6 +90,7 @@ class CameraStreamTrack(VideoStreamTrack):
             textWithBorder(frame=image,text=f"FPS after stream: {self._fps}", pos=(0,200))
         except Exception as e:
             print("Exception in recv():", e)
+            traceback.print_exc()
             image = np.zeros((height, width, 3), dtype=np.uint8)  # black frame
 
         # Create VideoFrame
@@ -89,7 +98,7 @@ class CameraStreamTrack(VideoStreamTrack):
         video_frame.pts = pts
         video_frame.time_base = time_base
         tempFrameStop = time_ns()
-        print(f"Time for method to run: {(tempFrameStop - tempFrameStart)/10**9}")
+        #print(f"Time for method to run: {(tempFrameStop - tempFrameStart)/10**9}")
         return video_frame
 
     def setup(self) -> None:
@@ -97,11 +106,14 @@ class CameraStreamTrack(VideoStreamTrack):
         Initializes cameras.
         """
 
-        CameraStreamTrack.cameras = {"Camera1": (0, (height,width)), "Camera2": (1,(height,width)), "Camera3": (2,(height,width)), "Camera4": (3,(height,width))}
+        CameraStreamTrack.cameras = {"front": (0, (height,width)),
+                                    "back": (1,(height,width)), 
+                                    "left": (2,(height,width)), 
+                                    "right": (3,(height,width))}
         # print("init")
         print(CameraStreamTrack.cameras.values())
 
-        CameraStreamTrack.camerasLoaded = loadCameras(self.cameras.values())
+        CameraStreamTrack.camerasLoaded = loadCameras(self.cameras)
         print(CameraStreamTrack.camerasLoaded)
         if not CameraStreamTrack.camerasLoaded:
             print(CameraStreamTrack.camerasLoaded)

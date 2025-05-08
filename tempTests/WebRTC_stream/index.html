@@ -18,24 +18,74 @@
         video.srcObject = event.streams[0];
       }
     };
-
     function preferH264(sdp) {
-      const sdpLines = sdp.split('\r\n');
-      const mLineIndex = sdpLines.findIndex(line => line.startsWith('m=video'));
+  const sdpLines = sdp.split('\r\n');
+  const mLineIndex = sdpLines.findIndex(line => line.startsWith('m=video'));
 
-      // Znajdź payloady dla H.264
-      const h264Payloads = sdpLines
-        .filter(line => line.startsWith('a=rtpmap') && line.includes('H264'))
-        .map(line => line.match(/:(\d+) H264/)[1]);
+  // Znajdź payloady dla H.264
+  const h264Payloads = sdpLines
+    .filter(line => line.startsWith('a=rtpmap') && line.includes('H264'))
+    .map(line => line.match(/:(\d+) H264/)[1]);
 
-      if (mLineIndex !== -1 && h264Payloads.length) {
-        const mLine = sdpLines[mLineIndex].split(' ');
-        const filtered = mLine.filter(p => h264Payloads.includes(p));
-        sdpLines[mLineIndex] = [...mLine.slice(0, 3), ...filtered].join(' ');
+  if (mLineIndex !== -1 && h264Payloads.length) {
+    const mLine = sdpLines[mLineIndex].split(' ');
+
+    // Filtruj tylko H.264 payloady
+    const filtered = mLine.filter(p => h264Payloads.includes(p));
+    
+    // Zaktualizuj linię 'm=video' - używając tylko H.264
+    sdpLines[mLineIndex] = [...mLine.slice(0, 3), ...filtered].join(' ');
+
+    // Szukaj wszystkich linii 'a=fmtp:<payload>', żeby zachować profile i inne parametry
+    sdpLines.forEach((line, index) => {
+      if (line.startsWith('a=fmtp') && h264Payloads.some(payload => line.includes(payload))) {
+        // Przekopiuj tę linię do wynikowego SDP
+        sdpLines[index] = line;
       }
+    });
 
-      return sdpLines.join('\r\n');
+    // Dodatkowo, dodajemy profile-level-id, jeżeli go nie ma (przykład: profile-level-id=42e01f dla H.264 Baseline)
+    const profileLineIndex = sdpLines.findIndex(line => line.startsWith('a=fmtp'));
+    if (profileLineIndex !== -1) {
+      let profileLine = sdpLines[profileLineIndex];
+      if (!profileLine.includes('profile-level-id')) {
+        // Dodaj profile-level-id (np. dla Baseline)
+        sdpLines[profileLineIndex] = profileLine + ";profile-level-id=42e01f"; // 42e01f dla H.264 Baseline
+      }
     }
+  }
+
+  // Zwróć zmodyfikowane SDP
+  return sdpLines.join('\r\n');
+}
+  /*function preferH264(sdp) {
+    const sdpLines = sdp.split('\r\n');
+    const mLineIndex = sdpLines.findIndex(line => line.startsWith('m=video'));
+    
+    const h264Payloads = sdpLines
+      .filter(line => line.startsWith('a=rtpmap') && line.includes('H264'))
+      .map(line => line.match(/:(\d+) H264/)[1]);
+
+    if (mLineIndex !== -1 && h264Payloads.length) {
+      const mLineParts = sdpLines[mLineIndex].split(' ');
+      const newMLineParts = [...mLineParts.slice(0, 3), ...mLineParts.slice(3).filter(p => h264Payloads.includes(p))];
+      sdpLines[mLineIndex] = newMLineParts.join(' ');
+
+      // Usuń wszystkie niepotrzebne linie związane z innymi payloadami
+      const allowedPayloads = new Set(h264Payloads);
+      const filteredLines = sdpLines.filter(line => {
+        if (line.startsWith('a=rtpmap:') || line.startsWith('a=fmtp:') || line.startsWith('a=rtcp-fb:')) {
+          const match = line.match(/:(\d+)/);
+          return match && allowedPayloads.has(match[1]);
+        }
+        return true;
+      });
+
+    return filteredLines.join('\r\n');
+  }
+
+  return sdp;
+}*/
 
     async function negotiate() {
       const offer = await pc.createOffer();
