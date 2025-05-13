@@ -6,7 +6,7 @@ import cv2
 import numpy as np
 from picamera2 import Picamera2
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
-from utils.CameraImageConnector import ImageConnector
+from utils.ImageConnectorsCollection import ImageConnectorSquare
 
 
 

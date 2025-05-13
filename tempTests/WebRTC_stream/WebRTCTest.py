@@ -13,7 +13,7 @@ import os
 import cv2
 import numpy as np
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../..')))
-from utils.CameraImageConnector import ImageConnector
+from utils.ImageConnectorsCollection import ImageConnectorSquare
 from utils.ThreadingCameraWithoutPicam import loadCameras
 from utils.ThreadingCamera import textWithBorder
 
@@ -36,7 +36,7 @@ class CameraStreamTrack(VideoStreamTrack):
     def __init__(self):
         super().__init__()
 
-        self.imageConnector = ImageConnector(width, height)
+        self.imageConnector = ImageConnectorSquare(width, height)
         self.frames = []
 
         if CameraStreamTrack.isInitialized is False:

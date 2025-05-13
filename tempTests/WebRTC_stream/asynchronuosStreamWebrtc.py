@@ -1,14 +1,10 @@
 #ten kod wysyla stream do wifi po webrtc!!!
 import asyncio
-import ssl
-import uuid
 import logging
-import argparse
-import json
 import pathlib
 from aiohttp import web
 from aiortc import RTCPeerConnection, RTCSessionDescription, VideoStreamTrack
-from aiortc.contrib.media import MediaBlackhole, MediaPlayer, MediaRelay, MediaRecorder
+from aiortc.contrib.media import MediaRelay
 from av import VideoFrame
 from time import time_ns
 import sys
@@ -16,8 +12,8 @@ import os
 import numpy as np
 import traceback
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../..')))
-from utils.ThreadingCamera import loadCameras,textWithBorder
-from utils.cameraImageConnector.ImageConnectorsCollection import ImageConnectorPanoramic, ImageConnectorSquare
+from utils.ThreadingCamera import loadCameras
+from utils.ImageConnectorsCollection import ImageConnectorSquare
 
 fps = 120
 width = 640
@@ -58,12 +54,10 @@ class CameraStreamTrack(VideoStreamTrack):
 
     async def recv(self):
         try:
-            
-            tempFrameStart = time_ns()
             # sleep to simulate fps
-            await asyncio.sleep(1/fps)
+            # await asyncio.sleep(1/fps)
             self._countFrames()
-            # print("recv() called")
+
             pts, time_base = await self.next_timestamp()
 
             if CameraStreamTrack.camerasLoaded is None:
@@ -71,14 +65,14 @@ class CameraStreamTrack(VideoStreamTrack):
 
             # Get frames from async threads and connect them
             frames = dict()
+            camfps = dict()
             for camera in CameraStreamTrack.camerasLoaded:
                 data = camera.getFrame()
                 frames[data[0]] = data[1]
-
-            # frames = [frame.getFrame() for frame in CameraStreamTrack.camerasLoaded]
-
+                camfps[data[0]] = camera.fps
 
             self.imageConnector.setImages(frames)
+            self.imageConnector.setFpsInfo(camfps, self._fps)
             if self.imageConnector.connectImages():
                 image = self.imageConnector.getConnectedImage()
                 if image is None:
@@ -86,8 +80,7 @@ class CameraStreamTrack(VideoStreamTrack):
             
             else:
                 raise Exception("Error connecting frames")
-            #myText = f"Nanos of fram connecting: {(tempFrameStop - tempFrameStart)/10**9}"
-            textWithBorder(frame=image,text=f"FPS after stream: {self._fps}", pos=(0,200))
+
         except Exception as e:
             print("Exception in recv():", e)
             traceback.print_exc()
@@ -97,8 +90,6 @@ class CameraStreamTrack(VideoStreamTrack):
         video_frame = VideoFrame.from_ndarray(image, format="rgb24")
         video_frame.pts = pts
         video_frame.time_base = time_base
-        tempFrameStop = time_ns()
-        #print(f"Time for method to run: {(tempFrameStop - tempFrameStart)/10**9}")
         return video_frame
 
     def setup(self) -> None:
