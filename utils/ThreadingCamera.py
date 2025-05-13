@@ -18,7 +18,7 @@ class cameraInputThreading(Thread):
         self.camRealesed = False
         self.reset = False
         self.loaded = False
-        self._fps = 0
+        self.fps = 0
         self.frameReady = Event()
         self.frameRaw = np.zeros(tempCameraResSize, dtype='uint8')
         
@@ -59,7 +59,7 @@ class cameraInputThreading(Thread):
         self._prevFrameTimeStamp = frameStart
         self._framesCount += 1
         if self._secondTimer >= 10**9:
-            self._fps = self._framesCount
+            self.fps = self._framesCount
             self._framesCount = self._secondTimer = 0
 
     def signalFun(self, job):
@@ -96,8 +96,6 @@ class cameraInputThreading(Thread):
                     print("Camera not responding! Possibly disconnected.")
                     break  
 
-                textWithBorder(frame=self.frameRaw,text=f"FPS before stream: {self._fps}")
-                textWithBorder(frame=self.frameRaw,text=f"{self.label}",pos=(0,50),fontSize=1)
                 if self.frameRaw is None:
                     missedFrames += 1
                 else: 

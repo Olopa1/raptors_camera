@@ -1,5 +1,7 @@
 import numpy as np
 from typing import Optional
+import cv2
+
 
 class ImageConnectorBase:
     
@@ -26,6 +28,10 @@ class ImageConnectorBase:
     def getConnectedImage(self) -> Optional[np.ndarray]:
         """returns last connected image or black frame if there was none previously"""
         return self.lastFrame
+
+    def setFpsInfo(self, camfps : dict, fps : int) -> None:
+        """This method must be overridden with your image connection implementation"""
+        pass
     
 
 class ImageConnectorPanoramic(ImageConnectorBase):
@@ -36,17 +42,26 @@ class ImageConnectorPanoramic(ImageConnectorBase):
     
     def _initFrame(self):
         print(f"Width:{self.singleImageWidth} Height:{self.singleImageHeight}")
-        self.lastFrame = np.zeros((self.singleImageHeight,self.singleImageWidth * 4,3),dtype=np.uint8)
+        self.lastFrame = np.zeros((self.singleImageHeight + 50,self.singleImageWidth * 4,3),dtype=np.uint8)
 
     def connectImages(self):
         """Connects images previously set with method setImages"""
         widthOffset = self.singleImageWidth
+        heightOffset = self.singleImageHeight
 
-        self.lastFrame[:,:widthOffset,:] = self.images["left"] if self.images["left"] is not None else 0
-        self.lastFrame[:,widthOffset:widthOffset * 2,:] = self.images["front"] if self.images["front"] is not None else 0
-        self.lastFrame[:,widthOffset*2:widthOffset*3,:] = self.images["right"] if self.images["right"] is not None else 0
-        self.lastFrame[:,widthOffset*3:,:] = self.images["back"] if self.images["back"] is not None else 0
+        self.lastFrame[:heightOffset,:widthOffset,:] = self.images["left"] if self.images["left"] is not None else 0
+        self.lastFrame[:heightOffset,widthOffset:widthOffset * 2,:] = self.images["front"] if self.images["front"] is not None else 0
+        self.lastFrame[:heightOffset,widthOffset*2:widthOffset*3,:] = self.images["right"] if self.images["right"] is not None else 0
+        self.lastFrame[:heightOffset,widthOffset*3:,:] = self.images["back"] if self.images["back"] is not None else 0
         return True
+
+    def setFpsInfo(self, camfps : dict, fps : int) -> None:
+        """Pass the fps information and it will be displayed in frame"""
+        self.lastFrame[self.singleImageHeight:, :] = 0
+        textWithBorder(frame=self.lastFrame, text=f"        Camera front: {camfps['front']} fps          Camera back: "
+                                                  f"{camfps['back']} fps          Camera left: {camfps['left']} fps    "
+                                                  f"      Camera right: {camfps['right']} fps          Stream: {fps} fps",
+                       pos=(0, self.singleImageHeight + 10), textColor=(255, 255, 255), borderColor=(200, 200, 200))
 
 
 class ImageConnectorSquare(ImageConnectorBase):
@@ -57,7 +72,7 @@ class ImageConnectorSquare(ImageConnectorBase):
     
     def _initFrame(self):
         print(f"Width:{self.singleImageWidth} Height:{self.singleImageHeight}")
-        self.lastFrame = np.zeros((self.singleImageHeight * 2,self.singleImageWidth * 2,3),dtype=np.uint8)
+        self.lastFrame = np.zeros((self.singleImageHeight * 2 + 90,self.singleImageWidth * 2,3),dtype=np.uint8)
 
     def connectImages(self):
         """Connects images previously set with method setImages"""
@@ -66,9 +81,19 @@ class ImageConnectorSquare(ImageConnectorBase):
 
         self.lastFrame[:heightOffset,:widthOffset,:] = self.images["front"] if self.images["front"] is not None else 0
         self.lastFrame[:heightOffset,widthOffset:,:] = self.images["back"] if self.images["back"] is not None else 0
-        self.lastFrame[heightOffset:,:widthOffset,:] = self.images["left"] if self.images["left"] is not None else 0
-        self.lastFrame[heightOffset:,widthOffset:,:] = self.images["right"] if self.images["right"] is not None else 0
+        self.lastFrame[heightOffset:heightOffset*2,:widthOffset,:] = self.images["left"] if self.images["left"] is not None else 0
+        self.lastFrame[heightOffset:heightOffset*2,widthOffset:,:] = self.images["right"] if self.images["right"] is not None else 0
         return True
+
+    def setFpsInfo(self, camfps : dict, fps : int) -> None:
+        """Pass the fps information and it will be displayed in frame"""
+        self.lastFrame[self.singleImageHeight*2:, :] = 0
+        textWithBorder(frame=self.lastFrame, text=f"    Camera front: {camfps['front']} fps    "
+                                                  f"Camera back: {camfps['back']} fps      Stream: {fps} fps",
+                       pos=(0, self.singleImageHeight * 2 + 10), textColor=(255, 255, 255), borderColor=(200, 200, 200))
+        textWithBorder(frame=self.lastFrame, text=f"    Camera left: {camfps['left']} fps      "
+                                                  f"Camera right: {camfps['right']} fps ",
+                       pos=(0, self.singleImageHeight * 2 + 50), textColor=(255, 255, 255), borderColor=(200, 200, 200))
 
 
 class ImageConnectorVerticalSplit(ImageConnectorBase):
@@ -79,7 +104,7 @@ class ImageConnectorVerticalSplit(ImageConnectorBase):
 
     def _initFrame(self):
         print(f"Width:{self.singleImageWidth} Height:{self.singleImageHeight}")
-        self.lastFrame = np.zeros((self.singleImageHeight * 2, self.singleImageWidth * 3, 3), dtype=np.uint8)
+        self.lastFrame = np.zeros((self.singleImageHeight * 2 + 50, self.singleImageWidth * 3, 3), dtype=np.uint8)
 
     def connectImages(self):
         """Connects images previously set with method setImages"""
@@ -87,10 +112,18 @@ class ImageConnectorVerticalSplit(ImageConnectorBase):
         heightOffset = self.singleImageHeight
 
         self.lastFrame[:heightOffset, widthOffset:widthOffset*2, :] = self.images["front"] if self.images["front"] is not None else 0
-        self.lastFrame[heightOffset:, widthOffset:widthOffset*2, :] = self.images["back"] if self.images["back"] is not None else 0
+        self.lastFrame[heightOffset:heightOffset*2, widthOffset:widthOffset*2, :] = self.images["back"] if self.images["back"] is not None else 0
         self.lastFrame[heightOffset//2:(heightOffset*3)//2, :widthOffset, :] = self.images["left"] if self.images["left"] is not None else 0
         self.lastFrame[heightOffset//2:(heightOffset*3)//2, widthOffset*2:, :] = self.images["right"] if self.images["right"] is not None else 0
         return True
+
+    def setFpsInfo(self, camfps : dict, fps : int) -> None:
+        """Pass the fps information and it will be displayed in frame"""
+        self.lastFrame[self.singleImageHeight*2:, :] = 0
+        textWithBorder(frame=self.lastFrame, text=f" Camera front: {camfps['front']} fps   Camera back: "
+                                                  f"{camfps['back']} fps   Camera left: {camfps['left']} fps "
+                                                  f"  Camera right: {camfps['right']} fps   Stream: {fps} fps",
+                       pos=(0, self.singleImageHeight*2 + 10), textColor=(255, 255, 255), borderColor=(200, 200, 200))
 
 
 class ImageConnectorHorizontalSplit(ImageConnectorBase):
@@ -101,7 +134,7 @@ class ImageConnectorHorizontalSplit(ImageConnectorBase):
 
     def _initFrame(self):
         print(f"Width:{self.singleImageWidth} Height:{self.singleImageHeight}")
-        self.lastFrame = np.zeros((self.singleImageHeight * 3, self.singleImageWidth * 2, 3), dtype=np.uint8)
+        self.lastFrame = np.zeros((self.singleImageHeight * 3 + 90, self.singleImageWidth * 2, 3), dtype=np.uint8)
 
     def connectImages(self):
         """Connects images previously set with method setImages"""
@@ -109,7 +142,23 @@ class ImageConnectorHorizontalSplit(ImageConnectorBase):
         heightOffset = self.singleImageHeight
 
         self.lastFrame[:heightOffset, widthOffset//2:(widthOffset*3)//2, :] = self.images["front"] if self.images["front"] is not None else 0
-        self.lastFrame[heightOffset*2:, widthOffset//2:(widthOffset*3)//2, :] = self.images["back"] if self.images["back"] is not None else 0
+        self.lastFrame[heightOffset*2:heightOffset*3, widthOffset//2:(widthOffset*3)//2, :] = self.images["back"] if self.images["back"] is not None else 0
         self.lastFrame[heightOffset:heightOffset*2, :widthOffset, :] = self.images["left"] if self.images["left"] is not None else 0
         self.lastFrame[heightOffset:heightOffset*2, widthOffset:, :] = self.images["right"] if self.images["right"] is not None else 0
         return True
+
+    def setFpsInfo(self, camfps : dict, fps : int) -> None:
+        """Pass the fps information and it will be displayed in frame"""
+        self.lastFrame[self.singleImageHeight*3:, :] = 0
+        textWithBorder(frame=self.lastFrame, text=f"    Camera front: {camfps['front']} fps    "
+                                                  f"Camera back: {camfps['back']} fps      Stream: {fps} fps",
+                       pos=(0, self.singleImageHeight * 3 + 10), textColor=(255, 255, 255), borderColor=(200, 200, 200))
+        textWithBorder(frame=self.lastFrame, text=f"    Camera left: {camfps['left']} fps      "
+                                                  f"Camera right: {camfps['right']} fps ",
+                       pos=(0, self.singleImageHeight * 3 + 50), textColor=(255, 255, 255), borderColor=(200, 200, 200))
+
+
+def textWithBorder(frame, text = "", pos = (0,0), textColor = (0,0,0), borderColor = (128,128,128), fontSize = 1):
+  _, h = cv2.getTextSize(text,cv2.FONT_HERSHEY_COMPLEX,fontSize,6)[0]
+  cv2.putText(frame,text,(pos[0],pos[1]+h),cv2.FONT_HERSHEY_COMPLEX,fontSize,borderColor,3)
+  cv2.putText(frame,text,(pos[0],pos[1]+h),cv2.FONT_HERSHEY_COMPLEX,fontSize,textColor,1)

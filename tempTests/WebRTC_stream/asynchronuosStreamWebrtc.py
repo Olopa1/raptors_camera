@@ -67,14 +67,17 @@ class CameraStreamTrack(VideoStreamTrack):
 
             # Get frames from async threads and connect them
             frames = dict()
+            camfps = dict()
             for camera in CameraStreamTrack.camerasLoaded:
                 data = camera.getFrame()
                 frames[data[0]] = data[1]
+                camfps[data[0]] = camera.fps
 
             # frames = [frame.getFrame() for frame in CameraStreamTrack.camerasLoaded]
 
 
             self.imageConnector.setImages(frames)
+            self.imageConnector.setFpsInfo(camfps, self._fps)
             if self.imageConnector.connectImages():
                 image = self.imageConnector.getConnectedImage()
                 if image is None:
@@ -83,7 +86,7 @@ class CameraStreamTrack(VideoStreamTrack):
             else:
                 raise Exception("Error connecting frames")
             #myText = f"Nanos of fram connecting: {(tempFrameStop - tempFrameStart)/10**9}"
-            textWithBorder(frame=image,text=f"FPS after stream: {self._fps}", pos=(0,200))
+
         except Exception as e:
             print("Exception in recv():", e)
             traceback.print_exc()
