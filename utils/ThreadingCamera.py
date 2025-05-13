@@ -1,3 +1,5 @@
+from time import sleep
+
 import numpy as np
 import time
 from picamera2 import Picamera2
@@ -41,6 +43,7 @@ class cameraInputThreading(Thread):
         self.cam.configure(self.cam.create_video_configuration({"size": (self.frameSize[1], self.frameSize[0]), "format": "RGB888"}))
         self.cam.start()
         #print(f"Camera sterted with properties: {self.cam.camera_properties}")
+        self.loaded = True
         return True 
     
     def unloadCamera(self):
@@ -51,7 +54,7 @@ class cameraInputThreading(Thread):
         return self.loaded
 
     def getFrame(self) -> tuple[str, np.ndarray]:
-        return (self.label, self.frame)
+        return self.label, self.frame
     
     def _countFrames(self):
         frameStart = time.time_ns()
@@ -63,7 +66,6 @@ class cameraInputThreading(Thread):
             self._framesCount = self._secondTimer = 0
 
     def signalFun(self, job):
-        global frame_result
         try:
             self.frameRaw = self.cam.wait(job)
         except Exception as e:
@@ -79,22 +81,24 @@ class cameraInputThreading(Thread):
             self.initCam()
             print(f"Camera with id {self.cameraId} loaded\n")
             while not self.camRealesed:
-                if self.label == "left":
-                    print("zyje")
-                
+                if not self.loaded:
+                    self.initCam()
+                    sleep(1)
+                    continue
+
                 self.alive = False
                 self.frameReady.clear()
                 job = self.cam.capture_array(wait=False, signal_function=self.signalFun)
 
-                #self.frame = self.cam.capture_array()
                 self._countFrames()
-                # frameRaw = self.cam.capture_array(wait=False, signal_function=self.captureFrame)
 
                 if self.frameReady.wait(timeout=2):  # wait max 2 seconds
                     pass
                 else:
                     print("Camera not responding! Possibly disconnected.")
-                    break  
+                    self.loaded = False
+                    self.initCam()
+                    continue
 
                 if self.frameRaw is None:
                     missedFrames += 1
@@ -106,8 +110,6 @@ class cameraInputThreading(Thread):
                     self.reset = True
                     self.initCam()
                 print(f"Camera id: {self.cameraId}Frame size: {self.frameRaw.shape}")
-                if self.frameRaw.shape[2] == 4:
-                    self.frameRaw = self.frameRaw[:,:,:3]
 
                 self.frame = self.frameRaw
                 #print(f"Frame type: {self.frame.dtype}")
@@ -133,9 +135,3 @@ def loadCameras(camerasDict: dict) -> list:
         c.start()
         cameras.append(c)
     return cameras
-
-def textWithBorder(frame, text = "", pos = (0,0), textColor = (0,0,0), borderColor = (128,128,128), fontSize = 1):
-  _, h = cv2.getTextSize(text,cv2.FONT_HERSHEY_COMPLEX,fontSize,6)[0]
-  cv2.putText(frame,text,(pos[0],pos[1]+h),cv2.FONT_HERSHEY_COMPLEX,fontSize,borderColor,3)
-  cv2.putText(frame,text,(pos[0],pos[1]+h),cv2.FONT_HERSHEY_COMPLEX,fontSize,textColor,1)
-

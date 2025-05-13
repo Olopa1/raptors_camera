@@ -12,7 +12,7 @@ import os
 import numpy as np
 import traceback
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../..')))
-from utils.ThreadingCamera import loadCameras,textWithBorder
+from utils.ThreadingCamera import loadCameras
 from utils.ImageConnectorsCollection import ImageConnectorSquare
 
 fps = 120
@@ -54,12 +54,10 @@ class CameraStreamTrack(VideoStreamTrack):
 
     async def recv(self):
         try:
-            
-            tempFrameStart = time_ns()
             # sleep to simulate fps
-            await asyncio.sleep(1/fps)
+            # await asyncio.sleep(1/fps)
             self._countFrames()
-            # print("recv() called")
+
             pts, time_base = await self.next_timestamp()
 
             if CameraStreamTrack.camerasLoaded is None:
@@ -73,9 +71,6 @@ class CameraStreamTrack(VideoStreamTrack):
                 frames[data[0]] = data[1]
                 camfps[data[0]] = camera.fps
 
-            # frames = [frame.getFrame() for frame in CameraStreamTrack.camerasLoaded]
-
-
             self.imageConnector.setImages(frames)
             self.imageConnector.setFpsInfo(camfps, self._fps)
             if self.imageConnector.connectImages():
@@ -85,7 +80,6 @@ class CameraStreamTrack(VideoStreamTrack):
             
             else:
                 raise Exception("Error connecting frames")
-            #myText = f"Nanos of fram connecting: {(tempFrameStop - tempFrameStart)/10**9}"
 
         except Exception as e:
             print("Exception in recv():", e)
@@ -96,8 +90,6 @@ class CameraStreamTrack(VideoStreamTrack):
         video_frame = VideoFrame.from_ndarray(image, format="rgb24")
         video_frame.pts = pts
         video_frame.time_base = time_base
-        tempFrameStop = time_ns()
-        #print(f"Time for method to run: {(tempFrameStop - tempFrameStart)/10**9}")
         return video_frame
 
     def setup(self) -> None:
