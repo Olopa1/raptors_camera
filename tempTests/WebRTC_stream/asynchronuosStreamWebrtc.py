@@ -1,14 +1,10 @@
 #ten kod wysyla stream do wifi po webrtc!!!
 import asyncio
-import ssl
-import uuid
 import logging
-import argparse
-import json
 import pathlib
 from aiohttp import web
 from aiortc import RTCPeerConnection, RTCSessionDescription, VideoStreamTrack
-from aiortc.contrib.media import MediaBlackhole, MediaPlayer, MediaRelay, MediaRecorder
+from aiortc.contrib.media import MediaRelay
 from av import VideoFrame
 from time import time_ns
 import sys
@@ -17,7 +13,7 @@ import numpy as np
 import traceback
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../..')))
 from utils.ThreadingCamera import loadCameras,textWithBorder
-from utils.cameraImageConnector.ImageConnectorsCollection import ImageConnectorPanoramic, ImageConnectorSquare
+from utils.ImageConnectorsCollection import ImageConnectorSquare
 
 fps = 120
 width = 640
