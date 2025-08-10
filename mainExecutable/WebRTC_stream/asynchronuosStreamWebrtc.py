@@ -12,9 +12,9 @@ import os
 import numpy as np
 import traceback
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../..')))
-from utils.ThreadingCamera import loadCameras
+#from utils.ThreadingCamera import loadCameras
 from utils.ImageConnectorsCollection import ImageConnectorSquare
-
+import utils.ThreadingCameraWithoutPicam as TCWP
 fps = 120
 width = 640
 height = 480
@@ -69,7 +69,7 @@ class CameraStreamTrack(VideoStreamTrack):
             for camera in CameraStreamTrack.camerasLoaded:
                 data = camera.getFrame()
                 frames[data[0]] = data[1]
-                camfps[data[0]] = camera.fps
+                camfps[data[0]] = 30
 
             self.imageConnector.setImages(frames)
             self.imageConnector.setFpsInfo(camfps, self._fps)
@@ -97,14 +97,15 @@ class CameraStreamTrack(VideoStreamTrack):
         Initializes cameras.
         """
 
-        CameraStreamTrack.cameras = {"front": (0, (height,width)),
-                                    "back": (1,(height,width)), 
-                                    "left": (2,(height,width)), 
-                                    "right": (3,(height,width))}
+        #CameraStreamTrack.cameras = {"front": (0, (height,width)),
+        #                            "back": (1,(height,width)),
+        #                            "left": (2,(height,width)),
+        #                            "right": (3,(height,width))}
         # print("init")
-        print(CameraStreamTrack.cameras.values())
 
-        CameraStreamTrack.camerasLoaded = loadCameras(self.cameras)
+        CameraStreamTrack.camerasLoaded = TCWP.loadCameras(4)
+        #print(CameraStreamTrack.cameras.values())
+
         print(CameraStreamTrack.camerasLoaded)
         if not CameraStreamTrack.camerasLoaded:
             print(CameraStreamTrack.camerasLoaded)

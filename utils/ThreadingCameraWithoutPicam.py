@@ -6,7 +6,7 @@ import cv2
 
 class cameraInputThreading(Thread):
 
-    def __init__(self, cameraId: int, camerasResolution: tuple):
+    def __init__(self, cameraId: int, camerasResolution: tuple, videoPath: str, lbl: str):
         super().__init__()
         self.cameraId = cameraId
         tempCameraResSize = (camerasResolution[0], camerasResolution[1], 3)
@@ -17,15 +17,20 @@ class cameraInputThreading(Thread):
         self.camRealesed = False
         self.reset = False
         self.loaded = False
+        self.videoPath = videoPath
+        self.label = lbl
 
     def initCam(self):
         if self.reset:
             self.cam.stop()
-        if not self.loadCamera():
+        if not self.loadCamera(self.videoPath):
             raise Exception("Cannot open camera")
 
-    def loadCamera(self) -> bool:
-        self.cam = cv2.VideoCapture(0)
+    def loadCamera(self, videoPath: str) -> bool:
+        if len(videoPath) == 0:
+            self.cam = cv2.VideoCapture(0)
+        else:
+            self.cam = cv2.VideoCapture(videoPath)
         if not self.cam:
             # print("falied to open camera")
             return False
@@ -42,41 +47,36 @@ class cameraInputThreading(Thread):
     def isFrameLoaded(self) -> bool:
         return self.loaded
 
-    def getFrame(self) -> np.ndarray:
-        return self.frame
+    def getFrame(self) -> tuple:
+        return self.label, self.frame
 
     def run(self) -> None:
         try:
             missedFrames = 0
             self.initCam()
-            print(f"Camera with id {self.cameraId} loaded\n")
+            print(f"Video stream loaded from file\n")
             while not self.camRealesed:
-                # self.frame = self.cam.capture_array()
                 ret, frameRaw = self.cam.read()
-                if not ret:
-                    raise Exception("Could not read frame from camera")
 
-                # Convert frame to RGB
+                if not ret:
+                    print("Restarting video...")
+                    self.cam.set(cv2.CAP_PROP_POS_FRAMES, 0)  # wracamy na początek pliku
+                    continue
+
                 frameRaw = cv2.cvtColor(frameRaw, cv2.COLOR_BGR2RGB)
-                # frameRaw = self.cam.capture_array()
-                print(f"Camera id: {self.cameraId}Frame size: {frameRaw.shape}")
+
                 if frameRaw.shape[:2] != (self.frameSize[0], self.frameSize[1]):
                     if frameRaw.shape[2] == 4:
                         frameRaw = frameRaw[:, :, :3]
-
                     self.frame = cv2.resize(frameRaw, (self.frameSize[1], self.frameSize[0]))
-                    # print()
                 else:
                     self.frame = frameRaw
-                # print(f"Frame type: {self.frame.dtype}")
+
                 if self.frame is None or np.any(self.frame):
                     missedFrames += 1
                 else:
                     missedFrames = 0
                     time.sleep(0.01)
-                # if missedFrames == 1000:
-                #    print("To much missed frames exiting loop")
-                #    break
 
         except Exception as e:
             print("Something went wrong")
@@ -84,14 +84,20 @@ class cameraInputThreading(Thread):
             exit()
 
 
-def loadCameras(camerasList: list) -> list:
-    # cameraList must be tuple of camera id and camera resolution that is another tuple in format (height, width)
-    # for example: [(0,(1280,720)),(1,(1280,720))]
+def loadCameras(images: int) -> list:
+    # Zamiast kamery, otwieramy plik
+    video_path = "C:\\dominik_rzeczy\\programy\\raptors_camera\\static\\videotest.mp4"  # tu podaj swoją ścieżkę do pliku
     cameras = []
-    for camera in camerasList:
-        c = cameraInputThreading(camera[0], camera[1])
-        c.daemon = True
-        c.start()
-        cameras.append(c)
-    return cameras
+    sides = ["front","back","left","right"]
+    # CameraStreamTrack.cameras = {"front": (0, (height,width)),
+    #                            "back": (1,(height,width)),
+    #                            "left": (2,(height,width)),
+    #                            "right": (3,(height,width))}
+    for i in range(images):
+        camera = cameraInputThreading(i, (480,640), video_path, sides[i])
+        camera.daemon = True
+        camera.start()
+        cameras.append(camera)
 
+    #print(cameras)
+    return cameras
