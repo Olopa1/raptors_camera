@@ -40,7 +40,7 @@ class cameraInputThreading(Thread):
         if not self.cam:
             #print("falied to open camera")
             return False
-        self.cam.configure(self.cam.create_video_configuration({"size": (self.frameSize[1], self.frameSize[0]), "format": "RGB888"}))
+        self.cam.configure(self.cam.create_video_configuration({"size": (self.frameSize[1], self.frameSize[0]), "format": "BGR888"}))
         self.cam.start()
         #print(f"Camera sterted with properties: {self.cam.camera_properties}")
         self.loaded = True
