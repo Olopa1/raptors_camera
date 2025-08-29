@@ -9,7 +9,7 @@ class cameraInputThreading(Thread):
     def __init__(self, cameraId: int, camerasResolution: tuple):
         super().__init__()
         self.cameraId = cameraId
-        tempCameraResSize = (camerasResolution[0], camerasResolution[1], 3)
+        tempCameraResSize = (1920, 1080, 3)
         # print(f"Width: {tempCameraResSize[1]}, Height: {tempCameraResSize[0]}")
         self.frame = np.ndarray(tempCameraResSize, dtype='uint8')
         self.frameSize = camerasResolution
@@ -29,10 +29,15 @@ class cameraInputThreading(Thread):
         if not self.cam:
             # print("falied to open camera")
             return False
-        self.cam.set(cv2.CAP_PROP_FRAME_WIDTH, self.frameSize[0])
-        self.cam.set(cv2.CAP_PROP_FRAME_HEIGHT, self.frameSize[1])
+        cap = cv2.VideoCapture(0, cv2.CAP_V4L2)  # na Linuksie lepiej używać CAP_V4L2
+        # Wymuś rozdzielczość Full HD
+        self.cam.set(cv2.CAP_PROP_FOURCC, cv2.VideoWriter_fourcc(*'MJPG'))
+        cap.set(cv2.CAP_PROP_FRAME_WIDTH, 1920)
+        cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 1080)
+        # self.cam.set(cv2.CAP_PROP_FRAME_WIDTH, self.frameSize[0])
+        # self.cam.set(cv2.CAP_PROP_FRAME_HEIGHT, self.frameSize[1])
 
-        # print(f"Camera sterted with properties: {self.cam.camera_properties}")
+        print(f"Camera sterted with properties: {self.cam.camera_properties}")
         return True
 
     def unloadCamera(self):
