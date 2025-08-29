@@ -109,7 +109,7 @@ class cameraInputThreading(Thread):
                     print("300frames missed\n")
                     self.reset = True
                     self.initCam()
-                print(f"Camera id: {self.cameraId}Frame size: {self.frameRaw.shape}")
+                #print(f"Camera id: {self.cameraId}Frame size: {self.frameRaw.shape}")
 
                 self.frame = self.frameRaw
                 #print(f"Frame type: {self.frame.dtype}")

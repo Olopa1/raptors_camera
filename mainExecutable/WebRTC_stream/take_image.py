@@ -6,7 +6,7 @@ import stat
 
 cam1 = 2
 cam2 = 5
-cap = cv2.VideoCapture(cam2)
+cap = cv2.VideoCapture(2)
 
 
 

@@ -13,7 +13,7 @@ import numpy as np
 import traceback
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../..')))
 from utils.ThreadingCamera import loadCameras
-from utils.ImageConnectorsCollection import ImageConnectorSquare
+from utils.ImageConnectorsCollection import ImageConnectorSquare,ImageConnectorOneImage
 PORT = 8080
 fps = 120
 width = 640
@@ -37,7 +37,7 @@ class CameraStreamTrack(VideoStreamTrack):
     def __init__(self):
         super().__init__()
 
-        self.imageConnector = ImageConnectorSquare(width, height)
+        self.imageConnector = ImageConnectorOneImage(width, height)
         self.frames = []
 
         self._fps = 0

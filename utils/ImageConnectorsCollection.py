@@ -156,9 +156,30 @@ class ImageConnectorHorizontalSplit(ImageConnectorBase):
         textWithBorder(frame=self.lastFrame, text=f"    Camera left: {camfps['left']} fps      "
                                                   f"Camera right: {camfps['right']} fps ",
                        pos=(0, self.singleImageHeight * 3 + 50), textColor=(255, 255, 255), borderColor=(200, 200, 200))
+        
+
+class ImageConnectorOneImage(ImageConnectorBase):
+    """Only one image"""
+
+    def __init__(self, imageWidth, imageHeight):
+        super().__init__(imageWidth, imageHeight)
+
+    def _initFrame(self):
+        print(f"Width:{self.singleImageWidth} Height:{self.singleImageHeight}")
+        self.lastFrame = np.zeros((self.singleImageHeight + 90, self.singleImageWidth , 3), dtype=np.uint8)
+
+    def connectImages(self):
+        """Connects images previously set with method setImages"""
+        self.lastFrame[:, :] = self.images["right"] if self.images["right"] is not None else 0
+        return True
+
+    def setFpsInfo(self, camfps : dict, fps : int) -> None:
+        """Pass the fps information and it will be displayed in frame"""
+        return None
 
 
 def textWithBorder(frame, text = "", pos = (0,0), textColor = (0,0,0), borderColor = (128,128,128), fontSize = 1):
-  _, h = cv2.getTextSize(text,cv2.FONT_HERSHEY_COMPLEX,fontSize,6)[0]
-  cv2.putText(frame,text,(pos[0],pos[1]+h),cv2.FONT_HERSHEY_COMPLEX,fontSize,borderColor,3)
-  cv2.putText(frame,text,(pos[0],pos[1]+h),cv2.FONT_HERSHEY_COMPLEX,fontSize,textColor,1)
+#   _, h = cv2.getTextSize(text,cv2.FONT_HERSHEY_COMPLEX,fontSize,6)[0]
+#   cv2.putText(frame,text,(pos[0],pos[1]+h),cv2.FONT_HERSHEY_COMPLEX,fontSize,borderColor,3)
+#   cv2.putText(frame,text,(pos[0],pos[1]+h),cv2.FONT_HERSHEY_COMPLEX,fontSize,textColor,1)
+    return None
